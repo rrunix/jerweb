@@ -4,7 +4,8 @@ const PROPAGATION_DELAY = 1500; // 1.5 seconds
 // Game state for CSMA namespace
 const waitingPlayers = [];
 const activeGames = new Map();
-const leaderboard = [];
+let leaderboard = [];
+let lastResetDate = new Date().toDateString();
 
 class Game {
     constructor(player1, player2) {
@@ -123,7 +124,7 @@ class Game {
             leaderboard.length = 10;
         }
 
-        // Notify players
+        // Notify players and broadcast updated leaderboard to all connected clients
         Object.values(this.players).forEach(player => {
             player.socket.emit('gameOver', {
                 finalScore: score,
@@ -132,12 +133,31 @@ class Game {
                 leaderboard: leaderboard
             });
         });
+        
+        // Broadcast updated leaderboard to all connected clients
+        const namespace = Object.values(this.players)[0].socket.nsp;
+        namespace.emit('leaderboard', leaderboard);
+    }
+}
+
+function checkAndResetLeaderboard() {
+    const currentDate = new Date().toDateString();
+    if (currentDate !== lastResetDate) {
+        leaderboard = [];
+        lastResetDate = currentDate;
+        console.log('Leaderboard reset for new day:', currentDate);
     }
 }
 
 function initializeSocket(namespace) {
     namespace.on('connection', (socket) => {
         console.log('New CSMA connection:', socket.id);
+        
+        // Check if we need to reset leaderboard
+        checkAndResetLeaderboard();
+        
+        // Send current leaderboard to new connection
+        socket.emit('leaderboard', leaderboard);
 
         socket.on('joinGame', (username) => {
             console.log(`${username} wants to join CSMA`);

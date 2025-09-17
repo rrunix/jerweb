@@ -240,11 +240,11 @@
                 <div class="stat-label">Final Score</div>
             </div>
             <button onclick="location.reload()" style="width: 100%;">Play Again</button>
-            
-            <div class="leaderboard" id="leaderboardSection">
-                <h3>🏆 Leaderboard</h3>
-                <div id="leaderboardList"></div>
-            </div>
+        </div>
+        
+        <div class="leaderboard" id="leaderboardSection">
+            <h3>🏆 Daily Leaderboard</h3>
+            <div id="leaderboardList"></div>
         </div>
     </div>
 
@@ -351,20 +351,30 @@
             document.getElementById('gameSection').style.display = 'none';
             document.getElementById('gameOverSection').style.display = 'block';
             document.getElementById('finalScore').textContent = data.finalScore;
-            
+        });
+
+        socket.on('leaderboard', (leaderboardData) => {
             // Display leaderboard
             const leaderboardEl = document.getElementById('leaderboardList');
             leaderboardEl.innerHTML = '';
             
-            data.leaderboard.forEach((entry, index) => {
+            if (leaderboardData.length === 0) {
                 const div = document.createElement('div');
-                div.className = 'leaderboard-entry';
-                div.innerHTML = `
-                    <span>${index + 1}. ${entry.team}</span>
-                    <span>${entry.score} pts</span>
-                `;
+                div.style.textAlign = 'center';
+                div.style.opacity = '0.7';
+                div.textContent = 'No games played today yet!';
                 leaderboardEl.appendChild(div);
-            });
+            } else {
+                leaderboardData.forEach((entry, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'leaderboard-entry';
+                    div.innerHTML = `
+                        <span>${index + 1}. ${entry.team}</span>
+                        <span>${entry.score} pts</span>
+                    `;
+                    leaderboardEl.appendChild(div);
+                });
+            }
         });
 
         socket.on('opponentDisconnected', () => {
