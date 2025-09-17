@@ -7,7 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
 
-const PORT = 3000;
+const PORT = 5001;
 const GAME_DURATION = 60000; // 1 minute
 const PROPAGATION_DELAY = 2000; // 2 seconds
 
