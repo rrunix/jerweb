@@ -184,7 +184,7 @@
         <h1>🌐 CSMA Game</h1>
         
         <div class="explanation">
-            <strong>How it works:</strong> Send packets to score points! But beware - if both players transmit at the same time, packets collide and are lost. There's a 2-second delay before you know the channel is busy. Work together for the best harmonic mean score!
+            <strong>How it works:</strong> Send packets to score points! But beware - if both players transmit at the same time, packets collide and are lost. There's a 1.5-second delay before you know the channel is busy. Work together for the best harmonic mean score!
         </div>
 
         <div id="loginSection">
@@ -250,7 +250,7 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
+        const socket = io('/csma');
         let canSend = true;
         let channelBusy = false;
 
