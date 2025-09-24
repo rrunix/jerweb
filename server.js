@@ -24,6 +24,12 @@ const games = {
         description: 'Carrier Sense Multiple Access - Learn network collision detection',
         module: CSMAGame,
         static: path.join(__dirname, 'games/csma/public')
+    },
+
+    'router': {
+        name: 'Router Game',
+        description: 'Simulate routing protocols and understand how data finds its way',
+        static: path.join(__dirname, 'games/router/public')
     }
     // Add more games here:
     // 'othergame': {
@@ -140,10 +146,11 @@ Object.keys(games).forEach(gameKey => {
 // Socket.IO connection handling with namespace support
 Object.keys(games).forEach(gameKey => {
     const gameNamespace = io.of(`/${gameKey}`);
-    const GameModule = games[gameKey].module;
-    
-    // Initialize game-specific handler
-    GameModule.initializeSocket(gameNamespace);
+    if (!games[gameKey] || games[gameKey].module) {
+        const GameModule = games[gameKey].module;
+        // Initialize game-specific handler
+        GameModule.initializeSocket(gameNamespace);
+    }
 });
 
 server.listen(PORT, '0.0.0.0', () => {
