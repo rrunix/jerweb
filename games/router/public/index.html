@@ -4,14 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Packet Delivery Adventure</title>
+    <link rel="stylesheet" href="/shared/styles.css">
     <style>
         body {
-            font-family: 'Courier New', monospace;
-            background: #0a0a0a;
-            color: #00ff00;
+            min-height: 100vh;
             margin: 0;
             padding: 20px;
-            min-height: 100vh;
         }
         
         .game-container {
@@ -32,70 +30,69 @@
         }
         
         .info-panel {
-            background: #1a1a1a;
-            border: 2px solid #00ff00;
-            padding: 15px;
-            border-radius: 5px;
             flex: 1;
             min-width: 200px;
         }
         
         .network-map {
-            background: #1a1a1a;
-            border: 2px solid #00ff00;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             padding: 20px;
-            border-radius: 5px;
+            border-radius: 15px;
             margin-bottom: 20px;
             position: relative;
             height: 600px;
             width: 100%;
             overflow: hidden;
+            backdrop-filter: blur(5px);
         }
         
         .router {
             position: absolute;
             width: 45px;
             height: 45px;
-            border: 2px solid #00ff00;
+            border: 2px solid rgba(255, 255, 255, 0.6);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #0a0a0a;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
             cursor: pointer;
             transition: all 0.3s ease;
             font-weight: bold;
             font-size: 11px;
+            backdrop-filter: blur(10px);
         }
         
         .router.available {
-            border-color: #00ffff;
-            background: #003333;
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.2);
             cursor: pointer;
         }
         
         .router.available:hover {
-            background: #006666;
+            background: rgba(76, 175, 80, 0.4);
             transform: scale(1.15);
-            box-shadow: 0 0 15px #00ffff;
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
         }
         
         .router.unavailable {
-            border-color: #444;
-            background: #222;
+            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.05);
             cursor: not-allowed;
             opacity: 0.5;
         }
         
         .router.current {
-            border-color: #ffff00;
-            background: #333300;
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.2);
             animation: pulse 1s infinite;
         }
         
         .router.destination {
-            border-color: #ff0000;
-            background: #330000;
+            border-color: #FF6B6B;
+            background: rgba(255, 107, 107, 0.2);
         }
         
         @keyframes pulse {
@@ -107,20 +104,20 @@
         .connection {
             position: absolute;
             height: 3px;
-            background: #004400;
+            background: rgba(255, 255, 255, 0.2);
             transform-origin: left center;
             z-index: -1;
-            opacity: 0.3;
+            opacity: 0.5;
         }
         
         .connection.available {
-            background: #00ff00;
+            background: #4CAF50;
             opacity: 1;
             animation: flow 2s linear infinite;
         }
         
         .connection.active {
-            background: #ffff00;
+            background: #FFD700;
             opacity: 1;
         }
         
@@ -133,19 +130,20 @@
             position: absolute;
             width: 20px;
             height: 20px;
-            background: #00ffff;
+            background: #667eea;
             border-radius: 50%;
             z-index: 10;
             transition: all 0.8s ease-in-out;
-            box-shadow: 0 0 10px #00ffff;
+            box-shadow: 0 0 15px rgba(102, 126, 234, 0.7);
         }
         
         .routing-table {
-            background: #1a1a1a;
-            border: 2px solid #00ff00;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             padding: 15px;
-            border-radius: 5px;
+            border-radius: 15px;
             margin-bottom: 20px;
+            backdrop-filter: blur(10px);
         }
         
         .table-row {
@@ -162,29 +160,29 @@
         }
         
         .table-row.destination-route {
-            background: #003300;
-            border: 1px solid #00ff00;
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4CAF50;
             animation: highlight 2s ease-in-out infinite;
         }
         
         @keyframes highlight {
-            0%, 100% { background: #003300; }
-            50% { background: #004400; }
+            0%, 100% { background: rgba(76, 175, 80, 0.2); }
+            50% { background: rgba(76, 175, 80, 0.3); }
         }
         
         .status-playing {
-            color: #00ff00;
+            color: #FFD700;
             font-weight: bold;
         }
         
         .status-won {
-            color: #ffff00;
+            color: #FFD700;
             font-weight: bold;
             animation: celebration 1s ease-in-out infinite;
         }
         
         .status-idle {
-            color: #888;
+            color: rgba(255, 255, 255, 0.6);
         }
         
         @keyframes celebration {
@@ -200,18 +198,19 @@
             position: absolute;
             top: 10px;
             right: 15px;
-            background: #004400;
-            color: #00ff00;
-            border: 1px solid #00ff00;
+            background: rgba(76, 175, 80, 0.2);
+            color: white;
+            border: 1px solid #4CAF50;
             padding: 5px 10px;
             cursor: pointer;
-            border-radius: 3px;
+            border-radius: 8px;
             font-size: 12px;
-            font-family: 'Courier New', monospace;
+            transition: all 0.3s ease;
         }
         
         .toggle-routing:hover {
-            background: #006600;
+            background: rgba(76, 175, 80, 0.4);
+            transform: translateY(-1px);
         }
         
         .routing-content.hidden {
@@ -219,11 +218,12 @@
         }
         
         .route-explanation {
-            background: #001a1a;
-            border: 2px solid #00ffff;
+            background: rgba(102, 126, 234, 0.1);
+            border: 2px solid rgba(102, 126, 234, 0.3);
             padding: 15px;
-            border-radius: 5px;
+            border-radius: 15px;
             margin-bottom: 20px;
+            backdrop-filter: blur(10px);
         }
         
         .controls {
@@ -231,62 +231,31 @@
             margin: 20px 0;
         }
         
-        .btn {
-            background: #004400;
-            color: #00ff00;
-            border: 2px solid #00ff00;
-            padding: 10px 20px;
+        .controls .btn {
             margin: 0 10px;
-            cursor: pointer;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            font-size: 16px;
-        }
-        
-        .btn:hover {
-            background: #00ff00;
-            color: #000;
-        }
-        
-        .btn:disabled {
-            background: #333;
-            color: #666;
-            border-color: #666;
-            cursor: not-allowed;
         }
         
         .log {
-            background: #1a1a1a;
-            border: 2px solid #00ff00;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             padding: 15px;
-            border-radius: 5px;
+            border-radius: 15px;
             height: 150px;
             overflow-y: auto;
             font-size: 14px;
-        }
-        
-        .success {
-            color: #00ff00;
-        }
-        
-        .warning {
-            color: #ffff00;
-        }
-        
-        .error {
-            color: #ff0000;
+            backdrop-filter: blur(10px);
         }
     </style>
 </head>
-<body>
-    <div class="game-container">
+<body class="game-body modern-dark font-modern bg-gradient-purple">
+    <div class="game-container glassmorphism">
         <div class="header">
-            <h1>🌐 PACKET DELIVERY ADVENTURE 📦</h1>
+            <h1 class="game-title">🌐 PACKET DELIVERY ADVENTURE 📦</h1>
             <p>Learn how network routing works by delivering packets across the network!</p>
         </div>
         
         <div class="game-info">
-            <div class="info-panel">
+            <div class="info-panel dark">
                 <h3>Current Status</h3>
                 <div>Position: <span id="current-router">A</span></div>
                 <div>Destination: <span id="destination">F</span></div>
@@ -295,17 +264,17 @@
                 <div>Status: <span id="game-status">Not Started</span></div>
             </div>
             
-            <div class="info-panel">
+            <div class="info-panel dark">
                 <h3>Available Moves</h3>
                 <div id="available-moves">Click a router to see options</div>
             </div>
             
-            <div class="info-panel">
+            <div class="info-panel dark">
                 <h3>Instructions</h3>
                 <div>1. Only directly connected routers are clickable</div>
                 <div>2. Use routing table to make decisions</div>
                 <div>3. Minimize hops for better score</div>
-                <div>4. Cyan routers = available moves</div>
+                <div>4. Green routers = available moves</div>
             </div>
         </div>
         
@@ -344,9 +313,9 @@
         </div>
         
         <div class="controls">
-            <button class="btn" id="start-btn" onclick="startGame()">Start New Game</button>
-            <button class="btn" id="auto-route" onclick="autoRoute()" disabled>Auto Route</button>
-            <button class="btn" id="reset-btn" onclick="resetGame()">Reset</button>
+            <button class="btn gradient" id="start-btn" onclick="startGame()">Start New Game</button>
+            <button class="btn gradient" id="auto-route" onclick="autoRoute()" disabled>Auto Route</button>
+            <button class="btn gradient" id="reset-btn" onclick="resetGame()">Reset</button>
         </div>
         
         <div class="log" id="game-log">
@@ -727,7 +696,7 @@
                 
                 row.innerHTML = `
                     <span>${dest}</span>
-                    <span style="font-weight: bold; color: #00ffff;">${route.nextHop}</span>
+                    <span style="font-weight: bold; color: #FFD700;">${route.nextHop}</span>
                     <span>${route.cost}</span>
                 `;
                 entriesDiv.appendChild(row);
@@ -749,9 +718,9 @@
             if (destRoute) {
                 guidanceDiv.innerHTML = `
                     <div><strong>🎯 To reach destination ${gameState.destination}:</strong></div>
-                    <div>→ Next hop should be: <span style="color: #00ffff; font-weight: bold;">${destRoute.nextHop}</span></div>
+                    <div>→ Next hop should be: <span style="color: #FFD700; font-weight: bold;">${destRoute.nextHop}</span></div>
                     <div>→ Total cost via this path: ${destRoute.cost}</div>
-                    <div style="margin-top: 10px; color: #ffff00;">💡 Click router "${destRoute.nextHop}" to follow this route!</div>
+                    <div style="margin-top: 10px; color: #FFD700;">💡 Click router "${destRoute.nextHop}" to follow this route!</div>
                 `;
             } else {
                 guidanceDiv.innerHTML = `
@@ -781,7 +750,7 @@
             
             log(`🚀 New game started! You are a packet at router ${startNode}.`, 'success');
             log(`🎯 Goal: Reach router ${destNode} using optimal routing.`, 'success');
-            log('💡 Cyan routers show your available next hops.', 'success');
+            log('💡 Green routers show your available next hops.', 'success');
             log('📋 Check the routing table to make smart decisions!', 'success');
             
             document.getElementById('auto-route').disabled = false;

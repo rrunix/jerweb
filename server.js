@@ -47,6 +47,9 @@ const games = {
     // }
 };
 
+// Serve shared static files
+app.use('/shared', express.static(path.join(__dirname, 'shared')));
+
 // Serve static files for each game
 Object.keys(games).forEach(gameKey => {
     app.use(`/${gameKey}`, express.static(games[gameKey].static));
@@ -61,35 +64,8 @@ app.get('/', (req, res) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Educational Mini-Games and Visualizations</title>
+        <link rel="stylesheet" href="/shared/styles.css">
         <style>
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-            body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                min-height: 100vh;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            }
-            .container {
-                background: rgba(255, 255, 255, 0.1);
-                backdrop-filter: blur(10px);
-                border-radius: 20px;
-                padding: 40px;
-                max-width: 800px;
-                width: 90%;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            }
-            h1 {
-                text-align: center;
-                margin-bottom: 30px;
-                font-size: 2.5em;
-            }
             .games-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -123,16 +99,16 @@ app.get('/', (req, res) => {
             }
         </style>
     </head>
-    <body>
-        <div class="container">
-            <h1>🎮 Educational Mini-Games</h1>
+    <body class="game-body modern-dark font-modern bg-gradient-purple">
+        <div class="game-container glassmorphism" style="max-width: 800px;">
+            <h1 class="game-title">🎮 Educational Mini-Games</h1>
             <p style="text-align: center; font-size: 1.1em; opacity: 0.9;">
                 Choose a game or visualization to learn about networking and computer science concepts!
             </p>
             <div class="games-grid">
                 ${Object.keys(games).map(gameKey => `
                     <a href="/${gameKey}" class="game-card">
-                        <div class="game-title">${games[gameKey].name}</div>
+                        <div class="game-title" style="font-size: 1.5em; margin-bottom: 10px;">${games[gameKey].name}</div>
                         <div class="game-description">${games[gameKey].description}</div>
                     </a>
                 `).join('')}
