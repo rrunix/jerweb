@@ -30,7 +30,14 @@ const games = {
         name: 'Router Game',
         description: 'Simulate routing protocols and understand how data finds its way',
         static: path.join(__dirname, 'games/router/public')
+    },
+
+    'cidr': {
+        name: 'CIDR and longest prefix matching Example',
+        description: 'Visualization of CIDR and longest prefix matching ',
+        static: path.join(__dirname, 'games/cidr/public')
     }
+
     // Add more games here:
     // 'othergame': {
     //     name: 'Other Game',
@@ -53,7 +60,7 @@ app.get('/', (req, res) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Educational Mini-Games</title>
+        <title>Educational Mini-Games and Visualizations</title>
         <style>
             * {
                 margin: 0;
@@ -120,7 +127,7 @@ app.get('/', (req, res) => {
         <div class="container">
             <h1>🎮 Educational Mini-Games</h1>
             <p style="text-align: center; font-size: 1.1em; opacity: 0.9;">
-                Choose a game to learn about networking and computer science concepts!
+                Choose a game or visualization to learn about networking and computer science concepts!
             </p>
             <div class="games-grid">
                 ${Object.keys(games).map(gameKey => `
