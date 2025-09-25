@@ -113,7 +113,7 @@ app.get('/', (req, res) => {
     </head>
     <body class="game-body modern-dark font-modern bg-gradient-purple">
         <div class="game-container glassmorphism" style="max-width: 800px;">
-            <h1 class="game-title">🎮 Educational Mini-Games</h1>
+            <h1 class="game-title">🎮 Educational Mini-Games and Visualizations</h1>
             <p style="text-align: center; font-size: 1.1em; opacity: 0.9;">
                 Choose a game or visualization to learn about networking and computer science concepts!
             </p>
