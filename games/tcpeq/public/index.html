@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCP Fairness - Distribución Equitativa del Ancho de Banda</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 100%;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        label {
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        input[type="range"] {
+            width: 150px;
+            accent-color: #667eea;
+        }
+        
+        input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .value-display {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .info-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .info-content {
+            color: #555;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        
+        .formula {
+            text-align: center;
+            font-size: 20px;
+            color: #667eea;
+            margin: 15px 0;
+            font-weight: bold;
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .container {
+            animation: fadeIn 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 TCP Fairness: Distribución Equitativa del Ancho de Banda</h1>
+        <p class="subtitle">Visualización de cómo TCP comparte el ancho de banda entre múltiples conexiones</p>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="connections">Número de Conexiones TCP (N):</label>
+                <input type="range" id="connections" min="1" max="10" value="4">
+                <span class="value-display" id="connectionsValue">4</span>
+            </div>
+            
+            <div class="control-group">
+                <label for="bandwidth">Ancho de Banda Total (R) Mbps:</label>
+                <input type="number" id="bandwidth" min="10" max="1000" value="100" step="10">
+            </div>
+        </div>
+        
+        <div class="formula">
+            Ancho de banda por conexión = R/N = <span id="formulaResult">25</span> Mbps
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="fairnessChart"></canvas>
+        </div>
+        
+        <div class="info-box">
+            <div class="info-title">📊 ¿Qué muestra esta gráfica?</div>
+            <div class="info-content">
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li><strong>TCP es "fair" (equitativo):</strong> Cuando múltiples conexiones TCP comparten un mismo enlace, el protocolo TCP distribuye el ancho de banda de manera equitativa entre todas ellas.</li>
+                    <li><strong>División equitativa:</strong> Si hay N conexiones compartiendo un enlace con capacidad R, cada conexión obtiene aproximadamente R/N del ancho de banda total.</li>
+                    <li><strong>Ejemplo práctico:</strong> Con <span id="exampleN">4</span> conexiones compartiendo <span id="exampleR">100</span> Mbps, cada una obtiene ~<span id="exampleResult">25</span> Mbps.</li>
+                    <li><strong>Mecanismo:</strong> Esto se logra mediante los algoritmos de control de congestión de TCP (como AIMD - Additive Increase Multiplicative Decrease).</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('fairnessChart').getContext('2d');
+        
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Conexión 1', 'Conexión 2', 'Conexión 3', 'Conexión 4'],
+                datasets: [{
+                    label: 'Ancho de Banda (Mbps)',
+                    data: [25, 25, 25, 25],
+                    backgroundColor: [
+                        'rgba(102, 126, 234, 0.8)',
+                        'rgba(118, 75, 162, 0.8)',
+                        'rgba(102, 126, 234, 0.8)',
+                        'rgba(118, 75, 162, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(102, 126, 234, 1)',
+                        'rgba(118, 75, 162, 1)',
+                        'rgba(102, 126, 234, 1)',
+                        'rgba(118, 75, 162, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return `Ancho de banda: ${context.parsed.y.toFixed(2)} Mbps`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Ancho de Banda (Mbps)',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Conexiones TCP',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                animation: {
+                    duration: 800,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+        
+        function updateChart() {
+            const n = parseInt(document.getElementById('connections').value);
+            const r = parseInt(document.getElementById('bandwidth').value);
+            const bandwidthPerConnection = r / n;
+            
+            // Update displays
+            document.getElementById('connectionsValue').textContent = n;
+            document.getElementById('formulaResult').textContent = bandwidthPerConnection.toFixed(2);
+            document.getElementById('exampleN').textContent = n;
+            document.getElementById('exampleR').textContent = r;
+            document.getElementById('exampleResult').textContent = bandwidthPerConnection.toFixed(2);
+            
+            // Update chart labels and data
+            const labels = [];
+            const data = [];
+            const backgroundColors = [];
+            const borderColors = [];
+            
+            for (let i = 1; i <= n; i++) {
+                labels.push(`Conexión ${i}`);
+                data.push(bandwidthPerConnection);
+                // Alternate colors
+                if (i % 2 === 1) {
+                    backgroundColors.push('rgba(102, 126, 234, 0.8)');
+                    borderColors.push('rgba(102, 126, 234, 1)');
+                } else {
+                    backgroundColors.push('rgba(118, 75, 162, 0.8)');
+                    borderColors.push('rgba(118, 75, 162, 1)');
+                }
+            }
+            
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = data;
+            chart.data.datasets[0].backgroundColor = backgroundColors;
+            chart.data.datasets[0].borderColor = borderColors;
+            
+            // Adjust y-axis max to show proportions better
+            chart.options.scales.y.max = r * 1.1;
+            
+            chart.update();
+        }
+        
+        // Event listeners
+        document.getElementById('connections').addEventListener('input', updateChart);
+        document.getElementById('bandwidth').addEventListener('input', updateChart);
+        
+        // Initial load
+        updateChart();
+    </script>
+</body>
+</html>

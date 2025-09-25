@@ -36,6 +36,18 @@ const games = {
         name: 'CIDR and longest prefix matching Example',
         description: 'Visualization of CIDR and longest prefix matching ',
         static: path.join(__dirname, 'games/cidr/public')
+    },
+
+    'tcpeq': {
+        name: 'Static Bandwidth distribution in TCP',
+        description: 'Bandwidth distribution in TCP among multiple connection ',
+        static: path.join(__dirname, 'games/tcpeq/public')
+    },
+
+    'tcpeqch': {
+        name: 'Dynamic Bandwidth distribution in TCP',
+        description: 'Dynamic bandwidth distribution in TCP among multiple connection ',
+        static: path.join(__dirname, 'games/tcpeqch/public')
     }
 
     // Add more games here:
