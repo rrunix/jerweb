@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCP Fairness - Evolución Temporal con Congestion Avoidance</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1100px;
+            width: 100%;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            background: linear-gradient(135deg, #2193b0, #6dd5ed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 450px;
+            margin-bottom: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        label {
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        button {
+            padding: 10px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #2193b0, #6dd5ed);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 147, 176, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        input[type="range"] {
+            width: 150px;
+            accent-color: #2193b0;
+        }
+        
+        input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #2193b0;
+        }
+        
+        .value-display {
+            color: #2193b0;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .status-box {
+            background: linear-gradient(135deg, #f6f8fb 0%, #e9f4f7 100%);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-label {
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        
+        .status-value {
+            color: #2193b0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .info-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .info-content {
+            color: #555;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        
+        .legend-custom {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        
+        .simulating {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .container {
+            animation: fadeIn 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📈 TCP Fairness: Evolución Temporal con Congestion Avoidance</h1>
+        <p class="subtitle">Observa cómo las conexiones TCP convergen hacia una distribución equitativa del ancho de banda</p>
+        
+        <div class="controls">
+            <div class="control-group">
+                <button id="startBtn" onclick="startSimulation()">▶️ Iniciar Simulación</button>
+            </div>
+            
+            <div class="control-group">
+                <label for="connections">Conexiones TCP:</label>
+                <input type="range" id="connections" min="2" max="5" value="3">
+                <span class="value-display" id="connectionsValue">3</span>
+            </div>
+            
+            <div class="control-group">
+                <label for="bandwidth">Capacidad Total (Mbps):</label>
+                <input type="number" id="bandwidth" min="50" max="200" value="100" step="10">
+            </div>
+            
+            <div class="control-group">
+                <label for="speed">Velocidad:</label>
+                <input type="range" id="speed" min="50" max="200" value="100">
+                <span class="value-display" id="speedValue">1x</span>
+            </div>
+        </div>
+        
+        <div class="status-box">
+            <div class="status-item">
+                <div class="status-label">Tiempo</div>
+                <div class="status-value" id="timeValue">0s</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Utilización Total</div>
+                <div class="status-value" id="utilizationValue">0%</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Pérdida de Paquetes</div>
+                <div class="status-value" id="lossValue">0%</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Fairness Index</div>
+                <div class="status-value" id="fairnessValue">0.00</div>
+            </div>
+        </div>
+        
+        <div class="legend-custom">
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(33, 147, 176, 1);"></div>
+                <span>Conexión 1</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(109, 213, 237, 1);"></div>
+                <span>Conexión 2</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 159, 64, 1);"></div>
+                <span>Conexión 3</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 99, 132, 1);"></div>
+                <span>Conexión 4</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(153, 102, 255, 1);"></div>
+                <span>Conexión 5</span>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="evolutionChart"></canvas>
+        </div>
+        
+        <div class="info-box">
+            <div class="info-title">🔬 Simulación de Congestion Avoidance</div>
+            <div class="info-content">
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li><strong>Fase Inicial:</strong> Las conexiones comienzan con diferentes anchos de banda (simulando que iniciaron en momentos distintos).</li>
+                    <li><strong>Congestion Avoidance (AIMD):</strong> 
+                        <ul>
+                            <li>Additive Increase: Cada conexión incrementa su ventana linealmente mientras no hay pérdidas.</li>
+                            <li>Multiplicative Decrease: Al detectar pérdida (cuando utilización > 95%), reduce su ventana a la mitad.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Pérdida de Paquetes:</strong> La probabilidad aumenta exponencialmente cuando la utilización total se acerca al 100% del ancho de banda.</li>
+                    <li><strong>Convergencia:</strong> Con el tiempo, todas las conexiones convergen hacia una distribución equitativa (~R/N cada una).</li>
+                    <li><strong>Fairness Index:</strong> Medida de equidad (1.0 = perfectamente equitativo). Calculado con la fórmula de Jain: (Σx)² / (n × Σx²)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('evolutionChart').getContext('2d');
+        
+        let simulationInterval = null;
+        let timeStep = 0;
+        let connections = [];
+        let chartData = {
+            labels: [],
+            datasets: []
+        };
+        
+        const colors = [
+            'rgba(33, 147, 176, 1)',
+            'rgba(109, 213, 237, 1)',
+            'rgba(255, 159, 64, 1)',
+            'rgba(255, 99, 132, 1)',
+            'rgba(153, 102, 255, 1)'
+        ];
+        
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} Mbps`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Ancho de Banda (Mbps)',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Tiempo (segundos)',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                animation: {
+                    duration: 0
+                }
+            }
+        });
+        
+        function initializeConnections() {
+            const numConnections = parseInt(document.getElementById('connections').value);
+            const totalBandwidth = parseInt(document.getElementById('bandwidth').value);
+            
+            connections = [];
+            for (let i = 0; i < numConnections; i++) {
+                // Inicializar con valores aleatorios para simular diferentes tiempos de inicio
+                connections.push({
+                    id: i,
+                    cwnd: Math.random() * (totalBandwidth / numConnections) + 10,
+                    ssthresh: totalBandwidth / 2,
+                    inCongestionAvoidance: true
+                });
+            }
+            
+            // Reiniciar datos del gráfico
+            chartData.labels = [];
+            chartData.datasets = [];
+            
+            for (let i = 0; i < numConnections; i++) {
+                chartData.datasets.push({
+                    label: `Conexión ${i + 1}`,
+                    data: [],
+                    borderColor: colors[i],
+                    backgroundColor: colors[i].replace('1)', '0.1)'),
+                    borderWidth: 2,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    pointHoverRadius: 5
+                });
+            }
+            
+            chart.update();
+        }
+        
+        function calculatePacketLoss(utilization) {
+            // Función exponencial para pérdida de paquetes basada en utilización
+            if (utilization < 0.9) return 0;
+            if (utilization < 0.95) return 0.01;
+            if (utilization < 1.0) return 0.05;
+            return 0.1 + (utilization - 1.0) * 0.5;
+        }
+        
+        function calculateFairnessIndex(bandwidths) {
+            if (bandwidths.length === 0) return 0;
+            const sum = bandwidths.reduce((a, b) => a + b, 0);
+            const sumSquared = sum * sum;
+            const sumOfSquares = bandwidths.reduce((a, b) => a + b * b, 0);
+            return sumSquared / (bandwidths.length * sumOfSquares);
+        }
+        
+        function simulateStep() {
+            const totalBandwidth = parseInt(document.getElementById('bandwidth').value);
+            
+            // Calcular utilización actual
+            let totalUsage = connections.reduce((sum, conn) => sum + conn.cwnd, 0);
+            let utilization = totalUsage / totalBandwidth;
+            let packetLoss = calculatePacketLoss(utilization);
+            
+            // Actualizar cada conexión según AIMD
+            connections.forEach(conn => {
+                if (Math.random() < packetLoss && conn.cwnd > 10) {
+                    // Multiplicative Decrease - pérdida detectada
+                    conn.cwnd *= 0.5;
+                    conn.ssthresh = conn.cwnd;
+                } else {
+                    // Additive Increase en congestion avoidance
+                    if (conn.cwnd < totalBandwidth / connections.length * 1.5) {
+                        conn.cwnd += 1 / conn.cwnd; // Incremento más suave
+                    }
+                }
+                
+                // Limitar al ancho de banda total
+                conn.cwnd = Math.min(conn.cwnd, totalBandwidth);
+                conn.cwnd = Math.max(conn.cwnd, 1);
+            });
+            
+            // Actualizar visualización
+            timeStep++;
+            const timeInSeconds = timeStep * 0.1;
+            chartData.labels.push(timeInSeconds.toFixed(1));
+            
+            connections.forEach((conn, index) => {
+                chartData.datasets[index].data.push(conn.cwnd);
+            });
+            
+            // Mantener solo los últimos 100 puntos
+            if (chartData.labels.length > 100) {
+                chartData.labels.shift();
+                chartData.datasets.forEach(dataset => {
+                    dataset.data.shift();
+                });
+            }
+            
+            // Calcular métricas
+            const bandwidths = connections.map(conn => conn.cwnd);
+            const fairnessIndex = calculateFairnessIndex(bandwidths);
+            
+            // Actualizar displays
+            document.getElementById('timeValue').textContent = timeInSeconds.toFixed(1) + 's';
+            document.getElementById('utilizationValue').textContent = (utilization * 100).toFixed(1) + '%';
+            document.getElementById('lossValue').textContent = (packetLoss * 100).toFixed(2) + '%';
+            document.getElementById('fairnessValue').textContent = fairnessIndex.toFixed(3);
+            
+            chart.update('none');
+        }
+        
+        function startSimulation() {
+            if (simulationInterval) {
+                // Detener simulación
+                clearInterval(simulationInterval);
+                simulationInterval = null;
+                document.getElementById('startBtn').textContent = '▶️ Iniciar Simulación';
+                document.getElementById('startBtn').classList.remove('simulating');
+            } else {
+                // Iniciar simulación
+                timeStep = 0;
+                initializeConnections();
+                
+                const speed = parseInt(document.getElementById('speed').value);
+                const interval = 100 * (100 / speed);
+                
+                simulationInterval = setInterval(simulateStep, interval);
+                document.getElementById('startBtn').textContent = '⏸️ Pausar Simulación';
+                document.getElementById('startBtn').classList.add('simulating');
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('connections').addEventListener('input', function() {
+            document.getElementById('connectionsValue').textContent = this.value;
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+                simulationInterval = null;
+                document.getElementById('startBtn').textContent = '▶️ Iniciar Simulación';
+            }
+        });
+        
+        document.getElementById('bandwidth').addEventListener('input', function() {
+            chart.options.scales.y.max = parseInt(this.value) * 1.2;
+            chart.update();
+        });
+        
+        document.getElementById('speed').addEventListener('input', function() {
+            const speedValue = parseInt(this.value);
+            document.getElementById('speedValue').textContent = (speedValue / 100).toFixed(1) + 'x';
+            
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+                const interval = 100 * (100 / speedValue);
+                simulationInterval = setInterval(simulateStep, interval);
+            }
+        });
+        
+        // Inicializar
+        initializeConnections();
+        chart.options.scales.y.max = parseInt(document.getElementById('bandwidth').value) * 1.2;
+        chart.update();
+    </script>
+</body>
+</html>

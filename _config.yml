@@ -1,0 +1,27 @@
+# Jekyll Configuration for Minigames
+
+# Site settings
+title: Educational Mini-Games and Visualizations
+description: Interactive networking and computer science visualizations
+
+# Build settings
+markdown: kramdown
+
+# Exclude files from Jekyll build
+exclude:
+  - node_modules/
+  - server.js
+  - package.json
+  - package-lock.json
+  - Dockerfile
+  - docker-compose.yml
+  - .dockerignore
+  - games/
+  - csma/
+  - README.md
+  - vendor/
+  - Gemfile
+  - Gemfile.lock
+
+# Preserve URL structure (optional)
+permalink: pretty
