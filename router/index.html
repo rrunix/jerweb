@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Packet Delivery Adventure</title>
+    <link rel="stylesheet" href="../shared/styles.css">
+    <style>
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .game-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .game-info {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .info-panel {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .network-map {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            position: relative;
+            height: 600px;
+            width: 100%;
+            overflow: hidden;
+            backdrop-filter: blur(5px);
+        }
+        
+        .router {
+            position: absolute;
+            width: 45px;
+            height: 45px;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            font-size: 11px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .router.available {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.2);
+            cursor: pointer;
+        }
+        
+        .router.available:hover {
+            background: rgba(76, 175, 80, 0.4);
+            transform: scale(1.15);
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+        }
+        
+        .router.unavailable {
+            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.05);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        
+        .router.current {
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.2);
+            animation: pulse 1s infinite;
+        }
+        
+        .router.destination {
+            border-color: #FF6B6B;
+            background: rgba(255, 107, 107, 0.2);
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .connection {
+            position: absolute;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            transform-origin: left center;
+            z-index: -1;
+            opacity: 0.5;
+        }
+        
+        .connection.available {
+            background: #4CAF50;
+            opacity: 1;
+            animation: flow 2s linear infinite;
+        }
+        
+        .connection.active {
+            background: #FFD700;
+            opacity: 1;
+        }
+        
+        @keyframes flow {
+            0% { background-position: 0 0; }
+            100% { background-position: 20px 0; }
+        }
+        
+        .packet {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 50%;
+            z-index: 10;
+            transition: all 0.8s ease-in-out;
+            box-shadow: 0 0 15px rgba(102, 126, 234, 0.7);
+        }
+        
+        .routing-table {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .table-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 10px;
+            border-bottom: 1px solid #004400;
+            border-radius: 3px;
+            margin: 2px 0;
+        }
+        
+        .table-row:last-child {
+            border-bottom: none;
+        }
+        
+        .table-row.destination-route {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4CAF50;
+            animation: highlight 2s ease-in-out infinite;
+        }
+        
+        @keyframes highlight {
+            0%, 100% { background: rgba(76, 175, 80, 0.2); }
+            50% { background: rgba(76, 175, 80, 0.3); }
+        }
+        
+        .status-playing {
+            color: #FFD700;
+            font-weight: bold;
+        }
+        
+        .status-won {
+            color: #FFD700;
+            font-weight: bold;
+            animation: celebration 1s ease-in-out infinite;
+        }
+        
+        .status-idle {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        @keyframes celebration {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .routing-section {
+            position: relative;
+        }
+        
+        .toggle-routing {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: rgba(76, 175, 80, 0.2);
+            color: white;
+            border: 1px solid #4CAF50;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .toggle-routing:hover {
+            background: rgba(76, 175, 80, 0.4);
+            transform: translateY(-1px);
+        }
+        
+        .routing-content.hidden {
+            display: none;
+        }
+        
+        .route-explanation {
+            background: rgba(102, 126, 234, 0.1);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .controls .btn {
+            margin: 0 10px;
+        }
+        
+        .log {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 15px;
+            border-radius: 15px;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="game-body modern-dark font-modern bg-gradient-purple">
+    <div class="game-container glassmorphism">
+        <div class="header">
+            <h1 class="game-title">🌐 PACKET DELIVERY ADVENTURE 📦</h1>
+            <p>Learn how network routing works by delivering packets across the network!</p>
+        </div>
+        
+        <div class="game-info">
+            <div class="info-panel dark">
+                <h3>Current Status</h3>
+                <div>Position: <span id="current-router">A</span></div>
+                <div>Destination: <span id="destination">F</span></div>
+                <div>Hops: <span id="hop-count">0</span></div>
+                <div>Score: <span id="score">0</span></div>
+                <div>Status: <span id="game-status">Not Started</span></div>
+            </div>
+            
+            <div class="info-panel dark">
+                <h3>Available Moves</h3>
+                <div id="available-moves">Click a router to see options</div>
+            </div>
+            
+            <div class="info-panel dark">
+                <h3>Instructions</h3>
+                <div>1. Only directly connected routers are clickable</div>
+                <div>2. Use routing table to make decisions</div>
+                <div>3. Minimize hops for better score</div>
+                <div>4. Green routers = available moves</div>
+            </div>
+        </div>
+        
+        <div class="network-map" id="network-map">
+            <!-- Network topology will be drawn here -->
+        </div>
+        
+        <div class="routing-section">
+            <button class="toggle-routing" onclick="toggleRoutingTable()">
+                <span id="toggle-text">Hide Table</span>
+            </button>
+            
+            <div class="routing-content" id="routing-content">
+                <div class="route-explanation">
+                    <h3>🧭 How to Choose Your Path</h3>
+                    <div id="route-guidance">
+                        <div>Look at the routing table below:</div>
+                        <div>1. Find the row for your destination (F)</div>
+                        <div>2. The "Next Hop" column tells you which router to go to</div>
+                        <div>3. The "Cost" shows the total distance via that path</div>
+                    </div>
+                </div>
+                
+                <div class="routing-table">
+                    <h3>Routing Table for Router <span id="table-router">A</span></h3>
+                    <div class="table-row">
+                        <strong>Destination</strong>
+                        <strong>Next Hop</strong>
+                        <strong>Cost</strong>
+                    </div>
+                    <div id="routing-entries">
+                        <!-- Routing entries will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn gradient" id="start-btn" onclick="startGame()">Start New Game</button>
+            <button class="btn gradient" id="auto-route" onclick="autoRoute()" disabled>Auto Route</button>
+            <button class="btn gradient" id="reset-btn" onclick="resetGame()">Reset</button>
+        </div>
+        
+        <div class="log" id="game-log">
+            <div class="success">Welcome to Packet Delivery Adventure!</div>
+            <div>Click 'Start New Game' to begin your routing journey.</div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            currentRouter: 'A',
+            destination: 'F',
+            hops: 0,
+            score: 0,
+            gameActive: false,
+            packetPosition: { x: 0, y: 0 },
+            routingTableVisible: true
+        };
+        
+        // Network topology with 20 nodes
+        const network = {
+            routers: {
+                'A': { x: 100, y: 100, connections: ['B', 'E'] },
+                'B': { x: 200, y: 80, connections: ['A', 'C', 'F'] },
+                'C': { x: 300, y: 100, connections: ['B', 'D', 'G'] },
+                'D': { x: 400, y: 80, connections: ['C', 'H'] },
+                'E': { x: 120, y: 200, connections: ['A', 'F', 'I'] },
+                'F': { x: 220, y: 180, connections: ['B', 'E', 'G', 'J'] },
+                'G': { x: 320, y: 200, connections: ['C', 'F', 'H', 'K'] },
+                'H': { x: 420, y: 180, connections: ['D', 'G', 'L'] },
+                'I': { x: 80, y: 300, connections: ['E', 'J', 'M'] },
+                'J': { x: 180, y: 280, connections: ['F', 'I', 'K', 'N'] },
+                'K': { x: 280, y: 300, connections: ['G', 'J', 'L', 'O'] },
+                'L': { x: 380, y: 280, connections: ['H', 'K', 'P'] },
+                'M': { x: 120, y: 400, connections: ['I', 'N', 'Q'] },
+                'N': { x: 220, y: 380, connections: ['J', 'M', 'O', 'R'] },
+                'O': { x: 320, y: 400, connections: ['K', 'N', 'P', 'S'] },
+                'P': { x: 420, y: 380, connections: ['L', 'O', 'T'] },
+                'Q': { x: 150, y: 500, connections: ['M', 'R'] },
+                'R': { x: 250, y: 480, connections: ['N', 'Q', 'S'] },
+                'S': { x: 350, y: 500, connections: ['O', 'R', 'T'] },
+                'T': { x: 450, y: 480, connections: ['P', 'S'] }
+            },
+            costs: {}
+        };
+        
+        // Generate costs for all connections
+        Object.keys(network.routers).forEach(routerId => {
+            const router = network.routers[routerId];
+            router.connections.forEach(connectedId => {
+                const key1 = `${routerId}-${connectedId}`;
+                const key2 = `${connectedId}-${routerId}`;
+                if (!network.costs[key1]) {
+                    const cost = Math.floor(Math.random() * 4) + 1; // Random cost 1-4
+                    network.costs[key1] = cost;
+                    network.costs[key2] = cost;
+                }
+            });
+        });
+        
+        // Simplified routing tables using shortest path algorithm
+        function calculateShortestPaths() {
+            const routingTables = {};
+            const nodes = Object.keys(network.routers);
+            
+            // Initialize routing tables
+            nodes.forEach(node => {
+                routingTables[node] = {};
+            });
+            
+            // For each source node, calculate shortest paths to all other nodes
+            nodes.forEach(source => {
+                const distances = {};
+                const previous = {};
+                const unvisited = new Set(nodes);
+                
+                // Initialize distances
+                nodes.forEach(node => {
+                    distances[node] = node === source ? 0 : Infinity;
+                });
+                
+                while (unvisited.size > 0) {
+                    // Find unvisited node with minimum distance
+                    let current = null;
+                    let minDist = Infinity;
+                    for (const node of unvisited) {
+                        if (distances[node] < minDist) {
+                            minDist = distances[node];
+                            current = node;
+                        }
+                    }
+                    
+                    if (current === null || minDist === Infinity) break;
+                    
+                    unvisited.delete(current);
+                    
+                    // Update distances to neighbors
+                    network.routers[current].connections.forEach(neighbor => {
+                        if (unvisited.has(neighbor)) {
+                            const cost = network.costs[`${current}-${neighbor}`];
+                            const newDist = distances[current] + cost;
+                            if (newDist < distances[neighbor]) {
+                                distances[neighbor] = newDist;
+                                previous[neighbor] = current;
+                            }
+                        }
+                    });
+                }
+                
+                // Build routing table for this source
+                nodes.forEach(dest => {
+                    if (dest !== source && distances[dest] !== Infinity) {
+                        // Find first hop in shortest path
+                        let nextHop = dest;
+                        while (previous[nextHop] !== source && previous[nextHop] !== undefined) {
+                            nextHop = previous[nextHop];
+                        }
+                        
+                        routingTables[source][dest] = {
+                            nextHop: nextHop,
+                            cost: distances[dest]
+                        };
+                    }
+                });
+            });
+            
+            return routingTables;
+        }
+        
+        const routingTables = calculateShortestPaths();
+        
+        function initializeNetwork() {
+            const mapElement = document.getElementById('network-map');
+            mapElement.innerHTML = '';
+            
+            // Draw connections
+            Object.keys(network.routers).forEach(routerId => {
+                const router = network.routers[routerId];
+                router.connections.forEach(connectedId => {
+                    if (routerId < connectedId) { // Avoid duplicate lines
+                        drawConnection(routerId, connectedId);
+                    }
+                });
+            });
+            
+            // Draw routers
+            Object.keys(network.routers).forEach(routerId => {
+                drawRouter(routerId);
+            });
+            
+            // Draw packet
+            drawPacket();
+        }
+        
+        function drawConnection(from, to) {
+            const fromRouter = network.routers[from];
+            const toRouter = network.routers[to];
+            
+            const dx = toRouter.x - fromRouter.x;
+            const dy = toRouter.y - fromRouter.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            const connection = document.createElement('div');
+            connection.className = 'connection';
+            connection.style.left = fromRouter.x + 22 + 'px';
+            connection.style.top = fromRouter.y + 22 + 'px';
+            connection.style.width = length + 'px';
+            connection.style.transform = `rotate(${angle}deg)`;
+            connection.id = `conn-${from}-${to}`;
+            
+            document.getElementById('network-map').appendChild(connection);
+        }
+        
+        function drawRouter(routerId) {
+            const router = network.routers[routerId];
+            const routerElement = document.createElement('div');
+            routerElement.className = 'router';
+            routerElement.style.left = router.x + 'px';
+            routerElement.style.top = router.y + 'px';
+            routerElement.textContent = routerId;
+            routerElement.id = `router-${routerId}`;
+            
+            if (routerId === gameState.destination) {
+                routerElement.classList.add('destination');
+            }
+            
+            routerElement.addEventListener('click', () => routerClicked(routerId));
+            
+            document.getElementById('network-map').appendChild(routerElement);
+        }
+        
+        function drawPacket() {
+            const currentRouterPos = network.routers[gameState.currentRouter];
+            const packet = document.createElement('div');
+            packet.className = 'packet';
+            packet.id = 'packet';
+            packet.style.left = (currentRouterPos.x + 12) + 'px';
+            packet.style.top = (currentRouterPos.y + 12) + 'px';
+            
+            document.getElementById('network-map').appendChild(packet);
+        }
+        
+        function updateCurrentRouter() {
+            // Remove all router classes
+            document.querySelectorAll('.router').forEach(r => {
+                r.classList.remove('current', 'available', 'unavailable');
+            });
+            
+            // Remove all connection classes
+            document.querySelectorAll('.connection').forEach(c => {
+                c.classList.remove('available', 'active');
+            });
+            
+            // Add current class to current router
+            const currentElement = document.getElementById(`router-${gameState.currentRouter}`);
+            if (currentElement) {
+                currentElement.classList.add('current');
+            }
+            
+            // Show only available connections and routers
+            if (gameState.gameActive) {
+                const currentConnections = network.routers[gameState.currentRouter].connections;
+                
+                // Update available moves display
+                updateAvailableMoves(currentConnections);
+                
+                // Mark connected routers as available
+                Object.keys(network.routers).forEach(routerId => {
+                    const routerElement = document.getElementById(`router-${routerId}`);
+                    if (routerId !== gameState.currentRouter && routerId !== gameState.destination) {
+                        if (currentConnections.includes(routerId)) {
+                            routerElement.classList.add('available');
+                        } else {
+                            routerElement.classList.add('unavailable');
+                        }
+                    }
+                });
+                
+                // Highlight available connections
+                currentConnections.forEach(connectedId => {
+                    const conn1 = document.getElementById(`conn-${gameState.currentRouter}-${connectedId}`);
+                    const conn2 = document.getElementById(`conn-${connectedId}-${gameState.currentRouter}`);
+                    if (conn1) conn1.classList.add('available');
+                    if (conn2) conn2.classList.add('available');
+                });
+            }
+            
+            updateDisplay();
+            updateRoutingTable();
+        }
+        
+        function updateAvailableMoves(connections) {
+            const movesDiv = document.getElementById('available-moves');
+            if (!gameState.gameActive) {
+                movesDiv.innerHTML = 'Start game to see moves';
+                return;
+            }
+            
+            if (connections.length === 0) {
+                movesDiv.innerHTML = 'No connections available';
+                return;
+            }
+            
+            movesDiv.innerHTML = connections.map(routerId => {
+                const cost = network.costs[`${gameState.currentRouter}-${routerId}`] || '?';
+                return `<div>→ ${routerId} (cost: ${cost})</div>`;
+            }).join('');
+        }
+        
+        function routerClicked(routerId) {
+            if (!gameState.gameActive) {
+                log('Start a new game first!', 'warning');
+                return;
+            }
+            
+            if (routerId === gameState.currentRouter) {
+                log('You are already at router ' + routerId, 'warning');
+                return;
+            }
+            
+            // Check if router is directly connected (only available routers are clickable)
+            const currentConnections = network.routers[gameState.currentRouter].connections;
+            if (!currentConnections.includes(routerId)) {
+                log(`Router ${routerId} is not directly connected to ${gameState.currentRouter}!`, 'error');
+                log('You can only move to: ' + currentConnections.join(', '), 'warning');
+                return;
+            }
+            
+            // Move packet
+            movePacket(routerId);
+        }
+        
+        function movePacket(targetRouter) {
+            gameState.hops++;
+            const cost = network.costs[`${gameState.currentRouter}-${targetRouter}`] || 1;
+            
+            // Check if this was the recommended next hop
+            const routes = routingTables[gameState.currentRouter] || {};
+            const destRoute = routes[gameState.destination];
+            if (destRoute && destRoute.nextHop === targetRouter) {
+                log(`✅ Good choice! Moving from ${gameState.currentRouter} to ${targetRouter} (Cost: ${cost})`, 'success');
+                log(`📋 Following routing table recommendation for destination ${gameState.destination}`, 'success');
+            } else {
+                log(`⚠️  Moving from ${gameState.currentRouter} to ${targetRouter} (Cost: ${cost})`, 'warning');
+                if (destRoute) {
+                    log(`💭 Note: Routing table suggested ${destRoute.nextHop} for destination ${gameState.destination}`, 'warning');
+                }
+            }
+            
+            // Animate packet movement
+            const packet = document.getElementById('packet');
+            const targetPos = network.routers[targetRouter];
+            packet.style.left = (targetPos.x + 12) + 'px';
+            packet.style.top = (targetPos.y + 12) + 'px';
+            
+            setTimeout(() => {
+                gameState.currentRouter = targetRouter;
+                updateCurrentRouter();
+                
+                // Check if reached destination
+                if (targetRouter === gameState.destination) {
+                    gameWon();
+                }
+            }, 800);
+        }
+        
+        function gameWon() {
+            gameState.gameActive = false;
+            const baseScore = 1000;
+            const hopPenalty = gameState.hops * 50;
+            gameState.score = Math.max(baseScore - hopPenalty, 100);
+            
+            log(`🎉 SUCCESS! Packet delivered to ${gameState.destination}!`, 'success');
+            log(`Hops: ${gameState.hops}, Score: ${gameState.score}`, 'success');
+            
+            updateDisplay();
+        }
+        
+        function updateDisplay() {
+            document.getElementById('current-router').textContent = gameState.currentRouter;
+            document.getElementById('destination').textContent = gameState.destination;
+            document.getElementById('hop-count').textContent = gameState.hops;
+            document.getElementById('score').textContent = gameState.score;
+            
+            // Update game status
+            const statusElement = document.getElementById('game-status');
+            if (!gameState.gameActive && gameState.hops === 0) {
+                statusElement.textContent = 'Not Started';
+                statusElement.className = 'status-idle';
+            } else if (gameState.gameActive) {
+                statusElement.textContent = 'Playing';
+                statusElement.className = 'status-playing';
+            } else {
+                statusElement.textContent = 'Completed!';
+                statusElement.className = 'status-won';
+            }
+        }
+        
+        function updateRoutingTable() {
+            const tableRouter = gameState.currentRouter;
+            document.getElementById('table-router').textContent = tableRouter;
+            
+            const entriesDiv = document.getElementById('routing-entries');
+            entriesDiv.innerHTML = '';
+            
+            const routes = routingTables[tableRouter] || {};
+            Object.keys(routes).forEach(dest => {
+                const route = routes[dest];
+                const row = document.createElement('div');
+                row.className = 'table-row';
+                
+                // Highlight the destination route
+                if (dest === gameState.destination) {
+                    row.classList.add('destination-route');
+                }
+                
+                row.innerHTML = `
+                    <span>${dest}</span>
+                    <span style="font-weight: bold; color: #FFD700;">${route.nextHop}</span>
+                    <span>${route.cost}</span>
+                `;
+                entriesDiv.appendChild(row);
+            });
+            
+            // Update route guidance
+            updateRouteGuidance(routes);
+        }
+        
+        function updateRouteGuidance(routes) {
+            const guidanceDiv = document.getElementById('route-guidance');
+            
+            if (!gameState.gameActive) {
+                guidanceDiv.innerHTML = '<div>Start the game to see routing guidance!</div>';
+                return;
+            }
+            
+            const destRoute = routes[gameState.destination];
+            if (destRoute) {
+                guidanceDiv.innerHTML = `
+                    <div><strong>🎯 To reach destination ${gameState.destination}:</strong></div>
+                    <div>→ Next hop should be: <span style="color: #FFD700; font-weight: bold;">${destRoute.nextHop}</span></div>
+                    <div>→ Total cost via this path: ${destRoute.cost}</div>
+                    <div style="margin-top: 10px; color: #FFD700;">💡 Click router "${destRoute.nextHop}" to follow this route!</div>
+                `;
+            } else {
+                guidanceDiv.innerHTML = `
+                    <div>❌ No route to ${gameState.destination} found in routing table</div>
+                    <div>This router may not know how to reach the destination</div>
+                `;
+            }
+        }
+        
+        function startGame() {
+            // Pick random start and destination
+            const nodes = Object.keys(network.routers);
+            const startNode = nodes[Math.floor(Math.random() * nodes.length)];
+            let destNode;
+            do {
+                destNode = nodes[Math.floor(Math.random() * nodes.length)];
+            } while (destNode === startNode);
+            
+            gameState.currentRouter = startNode;
+            gameState.destination = destNode;
+            gameState.hops = 0;
+            gameState.score = 0;
+            gameState.gameActive = true;
+            
+            initializeNetwork();
+            updateCurrentRouter();
+            
+            log(`🚀 New game started! You are a packet at router ${startNode}.`, 'success');
+            log(`🎯 Goal: Reach router ${destNode} using optimal routing.`, 'success');
+            log('💡 Green routers show your available next hops.', 'success');
+            log('📋 Check the routing table to make smart decisions!', 'success');
+            
+            document.getElementById('auto-route').disabled = false;
+        }
+        
+        function resetGame() {
+            gameState.gameActive = false;
+            gameState.hops = 0;
+            gameState.score = 0;
+            document.getElementById('auto-route').disabled = true;
+            
+            // Reset all router states
+            document.querySelectorAll('.router').forEach(r => {
+                r.classList.remove('current', 'available', 'unavailable');
+            });
+            document.querySelectorAll('.connection').forEach(c => {
+                c.classList.remove('available', 'active');
+            });
+            
+            initializeNetwork();
+            updateDisplay();
+            updateAvailableMoves([]);
+            log('🔄 Game reset. Click "Start New Game" to begin.', 'warning');
+        }
+        
+        function autoRoute() {
+            if (!gameState.gameActive) return;
+            
+            const current = gameState.currentRouter;
+            const routes = routingTables[current];
+            
+            if (routes && routes[gameState.destination]) {
+                const nextHop = routes[gameState.destination].nextHop;
+                log('Auto-routing suggests: ' + nextHop, 'warning');
+                setTimeout(() => movePacket(nextHop), 1000);
+            }
+        }
+        
+        function toggleRoutingTable() {
+            gameState.routingTableVisible = !gameState.routingTableVisible;
+            const content = document.getElementById('routing-content');
+            const toggleText = document.getElementById('toggle-text');
+            
+            if (gameState.routingTableVisible) {
+                content.classList.remove('hidden');
+                toggleText.textContent = 'Hide Table';
+            } else {
+                content.classList.add('hidden');
+                toggleText.textContent = 'Show Table';
+            }
+        }
+        
+        function log(message, type = '') {
+            const logDiv = document.getElementById('game-log');
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = '> ' + message;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        // Initialize the game
+        initializeNetwork();
+        updateDisplay();
+        updateRoutingTable();
+    </script>
+</body>
+</html>

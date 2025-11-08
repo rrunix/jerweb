@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Educational Mini-Games and Visualizations</title>
+    <link rel="stylesheet" href="shared/styles.css">
+    <style>
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .game-card {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+            display: block;
+        }
+        .game-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .game-title {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .game-description {
+            font-size: 1em;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body class="game-body modern-dark font-modern bg-gradient-purple">
+    <div class="game-container glassmorphism" style="max-width: 800px;">
+        <h1 class="game-title">🎮 Educational Mini-Games and Visualizations</h1>
+        <p style="text-align: center; font-size: 1.1em; opacity: 0.9;">
+            Choose a game or visualization to learn about networking and computer science concepts!
+        </p>
+        <div class="games-grid">
+            <a href="router/" class="game-card">
+                <div class="game-title" style="font-size: 1.5em; margin-bottom: 10px;">Router Game</div>
+                <div class="game-description">Simulate routing protocols and understand how data finds its way</div>
+            </a>
+
+            <a href="cidr/" class="game-card">
+                <div class="game-title" style="font-size: 1.5em; margin-bottom: 10px;">CIDR and longest prefix matching Example</div>
+                <div class="game-description">Visualization of CIDR and longest prefix matching</div>
+            </a>
+
+            <a href="tcpeq/" class="game-card">
+                <div class="game-title" style="font-size: 1.5em; margin-bottom: 10px;">Static Bandwidth distribution in TCP</div>
+                <div class="game-description">Bandwidth distribution in TCP among multiple connection</div>
+            </a>
+
+            <a href="tcpeqch/" class="game-card">
+                <div class="game-title" style="font-size: 1.5em; margin-bottom: 10px;">Dynamic Bandwidth distribution in TCP</div>
+                <div class="game-description">Dynamic bandwidth distribution in TCP among multiple connection</div>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

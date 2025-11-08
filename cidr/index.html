@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Longest Prefix Match Calculator</title>
+    <link rel="stylesheet" href="../shared/styles.css">
+    <style>
+
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+        }
+
+        .help-text {
+            color: #888;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+
+        .result-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-container.show {
+            display: block;
+        }
+
+        .result-title {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .network-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .network-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .network-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .network-item.match {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            font-weight: 600;
+            border: 2px solid #52c7a1;
+            animation: highlight 0.5s ease;
+        }
+
+        @keyframes highlight {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .network-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .network-address {
+            color: #333;
+            font-size: 14px;
+        }
+
+        .network-binary {
+            color: #888;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            margin-top: 4px;
+        }
+
+        .match-length {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .error {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 10px;
+            background: #ffe5e5;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+    </style>
+</head>
+<body class="game-body modern-light font-system bg-gradient-purple">
+    <div class="game-container solid-light">
+        <h1 class="game-title gradient-text">🌐 Longest Prefix Match Calculator</h1>
+        
+        <div class="input-group">
+            <label class="input-label light" for="testIp">Test IP Address</label>
+            <input type="text" class="form-input light" id="testIp" placeholder="e.g., 192.168.1.100">
+        </div>
+
+        <div class="input-group">
+            <label class="input-label light" for="networks">Network Addresses (IP/CIDR)</label>
+            <textarea class="form-input light" id="networks" placeholder="Enter one network per line&#10;e.g.,&#10;192.168.0.0/16&#10;192.168.1.0/24&#10;10.0.0.0/8"></textarea>
+            <div class="help-text">Enter network addresses with CIDR notation, one per line</div>
+        </div>
+
+        <button class="btn gradient full-width" onclick="findLongestPrefixMatch()">Find Longest Prefix Match</button>
+
+        <div class="error" id="error"></div>
+
+        <div class="result-container" id="results">
+            <div class="result-title">Results</div>
+            <ul class="network-list" id="networkList"></ul>
+        </div>
+    </div>
+
+    <script>
+        function ipToBinary(ip) {
+            const parts = ip.split('.');
+            if (parts.length !== 4) return null;
+            
+            let binary = '';
+            for (const part of parts) {
+                const num = parseInt(part);
+                if (isNaN(num) || num < 0 || num > 255) return null;
+                binary += num.toString(2).padStart(8, '0');
+            }
+            return binary;
+        }
+
+        function validateIP(ip) {
+            const parts = ip.split('.');
+            if (parts.length !== 4) return false;
+            
+            for (const part of parts) {
+                const num = parseInt(part);
+                if (isNaN(num) || num < 0 || num > 255) return false;
+            }
+            return true;
+        }
+
+        function parseNetwork(network) {
+            const parts = network.trim().split('/');
+            if (parts.length !== 2) return null;
+            
+            const ip = parts[0];
+            const cidr = parseInt(parts[1]);
+            
+            if (!validateIP(ip) || isNaN(cidr) || cidr < 0 || cidr > 32) {
+                return null;
+            }
+            
+            return { ip, cidr, binary: ipToBinary(ip) };
+        }
+
+        function formatBinaryWithHighlight(binary, matchLength, isTestIp = false, showUnderline = false, cidrLength = 0) {
+            let result = '';
+            let underline = '';
+            const binaryStr = binary.replace(/\s/g, ''); // Remove spaces if any
+            
+            for (let i = 0; i < 32; i++) {
+                if (i > 0 && i % 8 === 0) {
+                    result += ' ';
+                    underline += ' ';
+                }
+                
+                if (i < matchLength) {
+                    result += `<span style="color: #e74c3c; font-weight: bold;">${binaryStr[i]}</span>`;
+                } else {
+                    result += `<span style="color: ${isTestIp ? '#666' : '#999'};">${binaryStr[i]}</span>`;
+                }
+                
+                // Underline shows the network portion (CIDR mask)
+                if (showUnderline) {
+                    if (i < cidrLength) {
+                        underline += '<span style="color: #667eea;">‾</span>';
+                    } else {
+                        underline += '<span style="color: transparent;">‾</span>';
+                    }
+                }
+            }
+            
+            if (showUnderline) {
+                return result + '<br>' + underline;
+            }
+            
+            return result;
+        }
+
+        function findLongestPrefixMatch() {
+            const errorDiv = document.getElementById('error');
+            const resultsDiv = document.getElementById('results');
+            const networkList = document.getElementById('networkList');
+            
+            // Clear previous results and errors
+            errorDiv.classList.remove('show');
+            resultsDiv.classList.remove('show');
+            networkList.innerHTML = '';
+            
+            // Get inputs
+            const testIp = document.getElementById('testIp').value.trim();
+            const networksText = document.getElementById('networks').value.trim();
+            
+            // Validate test IP
+            if (!testIp) {
+                errorDiv.textContent = 'Please enter a test IP address';
+                errorDiv.classList.add('show');
+                return;
+            }
+            
+            if (!validateIP(testIp)) {
+                errorDiv.textContent = 'Invalid test IP address format';
+                errorDiv.classList.add('show');
+                return;
+            }
+            
+            // Validate networks
+            if (!networksText) {
+                errorDiv.textContent = 'Please enter at least one network';
+                errorDiv.classList.add('show');
+                return;
+            }
+            
+            const testBinary = ipToBinary(testIp);
+            const networkLines = networksText.split('\n').filter(line => line.trim());
+            const networks = [];
+            
+            for (const line of networkLines) {
+                const network = parseNetwork(line);
+                if (!network) {
+                    errorDiv.textContent = `Invalid network format: ${line}`;
+                    errorDiv.classList.add('show');
+                    return;
+                }
+                networks.push(network);
+            }
+            
+            // Calculate prefix matches
+            let longestMatch = null;
+            let longestMatchLength = -1;
+            const matches = [];
+            
+            for (const network of networks) {
+                let matchLength = 0;
+                const checkLength = Math.min(network.cidr, 32);
+                
+                for (let i = 0; i < checkLength; i++) {
+                    if (testBinary[i] === network.binary[i]) {
+                        matchLength++;
+                    } else {
+                        break;
+                    }
+                }
+                
+                // Check if the test IP is within this network
+                const isInNetwork = matchLength >= network.cidr;
+                
+                matches.push({
+                    network: `${network.ip}/${network.cidr}`,
+                    matchLength: isInNetwork ? network.cidr : 0,
+                    actualMatchLength: isInNetwork ? network.cidr : matchLength,
+                    binary: network.binary,
+                    cidr: network.cidr,
+                    isMatch: isInNetwork
+                });
+                
+                if (isInNetwork && network.cidr > longestMatchLength) {
+                    longestMatchLength = network.cidr;
+                    longestMatch = `${network.ip}/${network.cidr}`;
+                }
+            }
+            
+            // Display results
+            matches.sort((a, b) => b.matchLength - a.matchLength);
+            
+            for (const match of matches) {
+                const li = document.createElement('li');
+                li.className = 'network-item';
+                if (match.network === longestMatch) {
+                    li.classList.add('match');
+                }
+                
+                const binaryWithHighlight = formatBinaryWithHighlight(match.binary, match.actualMatchLength, false, true, match.cidr);
+                
+                li.innerHTML = `
+                    <div class="network-info">
+                        <div class="network-address">${match.network}</div>
+                        <div class="network-binary" style="line-height: 1.2;">${binaryWithHighlight}</div>
+                    </div>
+                    ${match.isMatch ? `<span class="match-length">Match: /${match.matchLength}</span>` : '<span style="color: #999; font-size: 12px;">No match</span>'}
+                `;
+                
+                networkList.appendChild(li);
+            }
+            
+            // Add test IP info at the top
+            const testInfo = document.createElement('div');
+            testInfo.style.marginBottom = '20px';
+            testInfo.style.padding = '15px';
+            testInfo.style.background = 'white';
+            testInfo.style.borderRadius = '10px';
+            testInfo.style.border = '2px solid #667eea';
+            
+            const testBinaryFormatted = formatBinaryWithHighlight(testBinary, 0, true);
+            
+            testInfo.innerHTML = `
+                <div style="font-weight: 600; color: #667eea; margin-bottom: 8px;">Test IP: ${testIp}</div>
+                <div style="font-family: 'Courier New', monospace; font-size: 12px;">${testBinaryFormatted}</div>
+                ${longestMatch ? `<div style="margin-top: 10px; color: #52c7a1; font-weight: 600;">✓ Longest Prefix Match: ${longestMatch}</div>` : '<div style="margin-top: 10px; color: #e74c3c;">✗ No matching network found</div>'}
+            `;
+            
+            networkList.insertBefore(testInfo, networkList.firstChild);
+            
+            resultsDiv.classList.add('show');
+        }
+
+        // Add example data on load
+        window.onload = function() {
+            document.getElementById('testIp').value = '192.168.1.100';
+            document.getElementById('networks').value = '10.0.0.0/8\n172.16.0.0/12\n192.168.0.0/16\n192.168.1.0/24\n192.168.1.96/28';
+        };
+    </script>
+</body>
+</html>
